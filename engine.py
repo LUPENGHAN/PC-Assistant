@@ -9,6 +9,7 @@ import webbrowser
 import pythoncom
 import win32com.client
 import difflib
+import ctypes
 
 CONFIG_FILE = "command_map.json"
 
@@ -72,7 +73,7 @@ def ask_user_to_select(options):
     choice = None
     dialog = tk.Toplevel(window)
     dialog.title("请选择要执行的命令")
-    dialog.geometry("300x200")
+    dialog.geometry("500x500")
     tk.Label(dialog, text="未能精准识别指令，请选择匹配项：").pack(pady=5)
 
     listbox = tk.Listbox(dialog)
@@ -101,6 +102,27 @@ def handle_command(command):
             return ask_user_to_select(possible_matches)
         return None
 
+    lower_cmd = command.lower()
+
+    if lower_cmd.startswith("搜索"):
+        query = command[4:].strip()
+        if query:
+            speak(f"正在使用 AI 搜索：{query}")
+            url = f"https://www.perplexity.ai/search?q={query}"
+            webbrowser.open(url)
+        else:
+            speak("请提供要搜索的内容")
+        return
+
+    elif lower_cmd.startswith("谷歌搜索") or lower_cmd.startswith("查找"):
+        query = command.replace("谷歌搜索", "").replace("查找", "").strip()
+        if query:
+            speak(f"正在使用 Google 搜索：{query}")
+            url = f"https://www.google.com/search?q={query}"
+            webbrowser.open(url)
+        else:
+            speak("请提供要搜索的内容")
+        return
     keyword = find_best_match(command)
     if not keyword:
         speak("我还不懂这个指令")
@@ -119,8 +141,8 @@ def handle_command(command):
                 speak(f"正在打开文件 {keyword}")
                 os.startfile(target["file"])
         elif isinstance(target, str):
-            speak(f"正在打开 {keyword}")
-            subprocess.Popen([target])
+            speak(f"正在尝试以管理员身份打开 {keyword}")
+            ctypes.windll.shell32.ShellExecuteW(None, "runas", target, None, None, 1)
         else:
             speak("指令匹配失败")
     except Exception as e:
@@ -179,6 +201,8 @@ def open_settings():
     settings.geometry("600x600")
     settings.minsize(600, 600)
     settings.configure(bg="#f8f9fa")
+    window.columnconfigure(0, weight=1)
+    window.rowconfigure(0, weight=1)
 
     def adjust_transparency():
         val = simpledialog.askfloat("设置透明度", "请输入透明度（0.1 - 1.0）:", minvalue=0.1, maxvalue=1.0)
@@ -331,6 +355,8 @@ window.geometry("600x520")
 window.configure(bg="#f0f2f5")
 window.attributes('-alpha', 0.3)
 window.attributes('-topmost', True)
+window.columnconfigure(0, weight=1)
+window.rowconfigure(0, weight=1)
 
 command_var = tk.StringVar()
 status_var = tk.StringVar()
